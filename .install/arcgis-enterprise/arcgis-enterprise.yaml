@@ -1,0 +1,281 @@
+# Deployment - for bringing up enterpriseadmin app pods.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${K8S_NAME_ADMIN_DEPLOYMENT}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: rest-administrator-api
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+spec:
+  replicas: 1 # Dont increase this for Alpha, can cause issue in pod affinity logic for portal-template pod
+  selector:
+    matchLabels:
+      arcgis/app: rest-administrator-api
+      arcgis/siteName: ${ARCGIS_SITENAME}
+      arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+  template:
+    metadata:
+      labels:
+        arcgis/app: rest-administrator-api
+        arcgis/siteName: ${ARCGIS_SITENAME}
+        arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+        arcgis/restartTimestamp: "000"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    arcgis/app: rest-administrator-api
+                    arcgis/siteName: ${ARCGIS_SITENAME}
+                    arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+                topologyKey: "kubernetes.io/hostname"
+      # Below serviceAccountName setting is important, this
+      # gives the enterpriseadmin app, the account privileges
+      # to access/edit K8s resources.
+      serviceAccountName: ${K8S_NAME_ADMIN_SERVICE_ACCOUNT}
+      # User running container also needs to run with arcgis group id
+      securityContext:
+        supplementalGroups: [${SUPPLEMENTAL_GROUP_ID}]
+      containers:
+      - name: filebeat
+        image: ${CONTAINER_IMAGE_URL_FILEBEAT}
+        imagePullPolicy: ${CONTAINER_IMAGE_PULL_POLICY}
+        resources:
+          requests:
+            cpu: "${RESOURCE_CPU_MIN_FILEBEAT}"
+            memory: "${RESOURCE_MEMORY_MIN_FILEBEAT}"
+          limits:
+             cpu: "${RESOURCE_CPU_MAX_FILEBEAT}"
+             memory: "${RESOURCE_MEMORY_MAX_FILEBEAT}"
+        args: [
+          "-c", "/etc/filebeat.yml",
+          "-e",
+        ]
+        env:
+        - name: ELASTICSEARCH_HOST
+          valueFrom:
+            secretKeyRef:
+              key: ELASTICSEARCH_SERVICE_NAME
+              name: ${K8S_NAME_SPATIOTEMPORAL_INDEX_STORE_INFO_SECRET}
+        - name: ELASTICSEARCH_PORT
+          value: "9200"
+        - name: ELASTICSEARCH_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: ELASTICSEARCH_USERNAME
+              name: ${K8S_NAME_SPATIOTEMPORAL_INDEX_STORE_INFO_SECRET}
+        - name: ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: ELASTICSEARCH_PASSWORD
+              name: ${K8S_NAME_SPATIOTEMPORAL_INDEX_STORE_INFO_SECRET}
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName        
+        lifecycle:
+          preStop:
+            exec:
+              command: [
+                  "sh", "-c",
+                  "sleep 15",
+              ]
+        volumeMounts:
+        - mountPath: /arcgisusr
+          name: arcgisusr
+          readOnly: true
+
+      - image: ${CONTAINER_IMAGE_URL_ENTERPRISE_ADMIN_API}
+        imagePullPolicy: ${CONTAINER_IMAGE_PULL_POLICY}
+        name: main-container
+        livenessProbe:
+          httpGet:
+            path: /admin
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: ${LIVENESS_PERIOD_SECONDS}
+          failureThreshold: 10
+          #failureThreshold: ${LIVENESS_FAILURE_THRESHOLD_COUNT}
+          timeoutSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /admin
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: ${STARTUP_INIT_DELAY_SECONDS}
+          failureThreshold: ${STARTUP_FAILURE_THRESHOLD_COUNT}
+          periodSeconds: ${STARTUP_PERIOD_SECONDS}
+          timeoutSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /admin
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: ${READINESS_PERIOD_SECONDS}
+          #failureThreshold: ${READINESS_FAILURE_THRESHOLD_COUNT}
+          failureThreshold: 10
+          timeoutSeconds: 30
+        resources:
+          requests:
+            cpu: "${RESOURCE_CPU_MIN_ADMIN}"
+            memory: "${RESOURCE_MEMORY_MIN_ADMIN}"
+          limits:
+            cpu: "${RESOURCE_CPU_MAX_ADMIN}"
+            memory: "${RESOURCE_MEMORY_MAX_ADMIN}"
+        env:
+            - name: ELASTICSEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: ELASTICSEARCH_USERNAME
+                  name: ${K8S_NAME_SPATIOTEMPORAL_INDEX_STORE_INFO_SECRET}
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: ELASTICSEARCH_PASSWORD
+                  name: ${K8S_NAME_SPATIOTEMPORAL_INDEX_STORE_INFO_SECRET}
+            - name: ELASTICSEARCH_SERVICE_NAME
+              valueFrom:
+                secretKeyRef:
+                  key: ELASTICSEARCH_SERVICE_NAME
+                  name: ${K8S_NAME_SPATIOTEMPORAL_INDEX_STORE_INFO_SECRET}
+
+            # K8s specific environment variables available to the pod
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: ARCGIS_LOG_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: ${K8S_NAME_LOG_SETTINGS_CONFIG_MAP}
+                  key: arcgis_log_dir
+            - name: ARCGIS_LOG_SETTINGS
+              valueFrom:
+                configMapKeyRef:
+                  name: ${K8S_NAME_LOG_SETTINGS_CONFIG_MAP}
+                  key: arcgis_log_settings 
+        ports:
+        - containerPort: 8443
+          name: https
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /arcgis/framework/etc/scripts/prestop.sh
+        volumeMounts:
+        - mountPath: /arcgisusr
+          name: arcgisusr
+        - mountPath: /arcgistmp
+          name: arcgistmp
+        - mountPath: /arcgisusr/adminProperties
+          name: log-settings
+        - mountPath: /arcgis/framework/etc/server-context
+          name: server-context-secret-volume
+        - mountPath: /arcgis/framework/etc/ssl/server-cert
+          name: server-cert
+        # Below internally done via java code
+        #- mountPath: /arcgis/framework/etc/ssl/jre-cacerts
+        #  name: jre-cacerts
+        - mountPath: /arcgisusr/env-variables
+          name: env-variables
+
+      imagePullSecrets:
+      - name: ${CONTAINER_IMAGE_PULL_SECRET_NAME}
+      volumes:
+      - name: arcgisusr
+        emptyDir: {}
+      - name: arcgistmp
+        emptyDir: {}
+      - name: log-settings
+        configMap:
+          name: ${K8S_NAME_LOG_SETTINGS_CONFIG_MAP}
+      - name: server-context-secret-volume
+        secret:
+          secretName: ${ARCGIS_SITENAME}-server-context
+      - name: server-cert
+        secret:
+          secretName: ${ARCGIS_SITENAME}-interpod-cert-pfx
+      # Below internally done via java code
+      #- name: jre-cacerts
+      #  secret:
+      #    secretName: ${ARCGIS_SITENAME}-jre-cacerts
+      - name: env-variables
+        secret:
+          secretName: ${K8S_NAME_ENV_VARIABLES_SECRET}
+---
+# Service - for exposing the app
+# NOTE: Keep below Service spec in sync with java/enterprise-admin/enterprise-admin-core/
+# src/main/resources/spec/k8s/framework/admin/enterprise-admin.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${K8S_NAME_ADMIN_SERVICE}
+  namespace: "${K8S_NAMESPACE}"
+  annotations:
+    prometheus.io/port: '8443'
+    prometheus.io/scrape: 'true'
+  labels:
+    arcgis/app: rest-administrator-api
+    arcgis/siteName: ${ARCGIS_SITENAME}
+spec:
+  selector:
+    arcgis/app: rest-administrator-api
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+  ports:
+  - port: 8443
+    targetPort: 8443
+    protocol: TCP
+
+---
+
+# Ingress - for exposing the app with the /enterpriseadmin context via
+# a Ingress controller (Nginx).
+
+# NOTE: Keep below Ingress spec in sync with java/enterprise-admin/enterprise-admin-core/
+# src/main/resources/spec/k8s/framework/admin/enterprise-admin.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${K8S_NAME_ADMIN_INGRESS}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: rest-administrator-api
+    arcgis/siteName: ${ARCGIS_SITENAME}
+  annotations:
+    kubernetes.io/ingress.class: ${INGRESS_CLASS}
+    nginx.ingress.kubernetes.io/rewrite-target: /admin/$1
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /${CONTEXT}/admin(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: ${ARCGIS_SITENAME}-rest-administrator-api
+            port:
+              number: 8443

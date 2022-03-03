@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ageok-resource-quota
+spec:
+  hard:
+    requests.cpu: "120"
+    requests.memory: 240Gi
+    limits.cpu: "120"
+    limits.memory: 240Gi

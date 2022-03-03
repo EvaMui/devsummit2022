@@ -1,0 +1,147 @@
+# Help Service.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${K8S_NAME_HELP_SERVICE}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/app: help
+    arcgis/tier: document
+spec:
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+      name: http
+    - port: 8443
+      targetPort: 8443
+      protocol: TCP
+      name: https
+  selector:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/app: help
+    arcgis/tier: document
+    arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+---
+# Help Deployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${K8S_NAME_HELP_DEPLOYMENT}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/app: help
+    arcgis/tier: document
+    arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      arcgis/siteName: ${ARCGIS_SITENAME}
+      arcgis/app: help
+      arcgis/tier: document
+      arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+  template:
+    metadata:
+      labels:
+        arcgis/siteName: ${ARCGIS_SITENAME}
+        arcgis/app: help
+        arcgis/tier: document
+        arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+        arcgis/restartTimestamp: "000"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    arcgis/siteName: ${ARCGIS_SITENAME}
+                    arcgis/app: help
+                    arcgis/tier: document
+                    arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+                topologyKey: "kubernetes.io/hostname"
+      securityContext:
+        supplementalGroups: [${SUPPLEMENTAL_GROUP_ID}]
+      automountServiceAccountToken: false
+      containers:
+        - name: main-container
+          image: ${CONTAINER_IMAGE_URL_HELP}
+          imagePullPolicy: ${CONTAINER_IMAGE_PULL_POLICY}
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: ${LIVENESS_PERIOD_SECONDS}
+            failureThreshold: ${LIVENESS_FAILURE_THRESHOLD_COUNT}
+            timeoutSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: ${READINESS_PERIOD_SECONDS}
+            failureThreshold: ${READINESS_FAILURE_THRESHOLD_COUNT}
+            timeoutSeconds: 30
+          resources:
+            requests:
+              cpu: ${RESOURCE_CPU_MIN_HELPDOC}
+              memory: ${RESOURCE_MEMORY_MIN_HELPDOC}
+            limits:
+              cpu: ${RESOURCE_CPU_MAX_HELPDOC}
+              memory: ${RESOURCE_MEMORY_MAX_HELPDOC}
+          ports:
+            - containerPort: 8080
+              name: ui
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /arcgisusr
+              name: arcgisusr
+            - mountPath: /arcgis/framework/etc/ssl/server-cert
+              name: server-cert
+          env:
+            - name: ARCGIS_LOG_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: ${K8S_NAME_LOG_SETTINGS_CONFIG_MAP}
+                  key: arcgis_log_dir
+      imagePullSecrets:
+        - name: ${CONTAINER_IMAGE_PULL_SECRET_NAME}
+      volumes:
+        - name: arcgisusr
+          emptyDir: {}
+        - name: server-cert
+          secret:
+            secretName: ${ARCGIS_SITENAME}-interpod-cert-pfx
+---
+# Help Ingress
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${K8S_NAME_HELP_INGRESS}
+  namespace: "${K8S_NAMESPACE}"
+  annotations:
+    kubernetes.io/ingress.class: ${INGRESS_CLASS}
+    nginx.ingress.kubernetes.io/rewrite-target: $1
+    nginx.ingress.kubernetes.io/backend-protocol: ${BACKEND_PROTOCOL}
+    nginx.ingress.kubernetes.io/configuration-snippet: 'rewrite ^(.*help)/(it|ko|ar|pt-BR|pt-br|pl)(.*)$  $1/en$3  permanent;'
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/app: help
+    arcgis/tier: document
+spec:
+  rules:
+  - http:
+      paths:
+      - path: ${HELP_APP_PATH}
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: ${K8S_NAME_HELP_SERVICE}
+            port:
+              number: ${HELP_SERVICE_PORT}

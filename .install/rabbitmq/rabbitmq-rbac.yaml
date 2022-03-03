@@ -1,0 +1,45 @@
+#RBAC permissions
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${K8S_NAME_QUEUE_SERVICE_ACCOUNT}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+   arcgis/app: rabbitmq
+   arcgis/siteName: ${ARCGIS_SITENAME}
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ${K8S_NAME_QUEUE_ROLE}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+   arcgis/app: rabbitmq
+   arcgis/siteName: ${ARCGIS_SITENAME}
+rules:
+- apiGroups: 
+    - ""
+  resources: 
+    - endpoints
+  verbs: 
+    - get
+    - list
+    - watch
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ${K8S_NAME_QUEUE_ROLE_BINDING}
+  namespace:  ${K8S_NAMESPACE}
+  labels:
+   arcgis/app: rabbitmq
+   arcgis/siteName: ${ARCGIS_SITENAME}
+subjects:
+- kind: ServiceAccount
+  name: ${K8S_NAME_QUEUE_SERVICE_ACCOUNT}
+  namespace:  ${K8S_NAMESPACE}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ${K8S_NAME_QUEUE_ROLE}
+---  

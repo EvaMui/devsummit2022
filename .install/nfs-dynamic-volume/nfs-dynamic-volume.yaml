@@ -1,0 +1,119 @@
+
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: nfs-client-provisioner-${DEPLOYMENT_NAME}
+  namespace: ${STORAGE_NAMESPACE}
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-client-provisioner-${DEPLOYMENT_NAME}-runner
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "update", "patch"]
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: run-nfs-client-provisioner-${DEPLOYMENT_NAME}
+subjects:
+  - kind: ServiceAccount
+    name: nfs-client-provisioner-${DEPLOYMENT_NAME}
+    namespace: ${STORAGE_NAMESPACE}
+roleRef:
+  kind: ClusterRole
+  name: nfs-client-provisioner-${DEPLOYMENT_NAME}-runner
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: leader-locking-nfs-client-provisioner-${DEPLOYMENT_NAME}
+  namespace: ${STORAGE_NAMESPACE}
+rules:
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: leader-locking-nfs-client-provisioner-${DEPLOYMENT_NAME}
+  namespace: ${STORAGE_NAMESPACE}
+subjects:
+  - kind: ServiceAccount
+    name: nfs-client-provisioner-${DEPLOYMENT_NAME}
+    namespace: ${STORAGE_NAMESPACE}
+roleRef:
+  kind: Role
+  name: leader-locking-nfs-client-provisioner-${DEPLOYMENT_NAME}
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ${STORAGE_CLASS_NAME}
+  namespace: ${STORAGE_NAMESPACE}
+provisioner: esri.com-${DEPLOYMENT_NAME}/nfs
+parameters:
+  archiveOnDelete: "false"
+
+---
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: nfs-client-provisioner-${DEPLOYMENT_NAME}
+  namespace: ${STORAGE_NAMESPACE}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      arcgis/app: nfs-client-provisioner-${DEPLOYMENT_NAME}    
+  template:
+    metadata:
+      labels:
+        arcgis/app: nfs-client-provisioner-${DEPLOYMENT_NAME}
+    spec:
+      serviceAccountName: nfs-client-provisioner-${DEPLOYMENT_NAME}
+      containers:
+        - name: nfs-client-provisioner
+          image: gcr.io/k8s-staging-sig-storage/nfs-subdir-external-provisioner:canary
+          volumeMounts:
+            - name: nfs-client-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+              value: esri.com-${DEPLOYMENT_NAME}/nfs
+            - name: NFS_SERVER
+              value: ${NFS_SERVER_NAME}
+            - name: NFS_PATH
+              value: ${NFS_SERVER_PATH}
+      volumes:
+        - name: nfs-client-root
+          nfs:
+            server: ${NFS_SERVER_NAME}
+            path: ${NFS_SERVER_PATH}

@@ -1,0 +1,9 @@
+# A list of common URLs used during the installation processes
+#
+DOCKER_GPG_KEYS="https://download.docker.com/linux/ubuntu/gpg"
+DOCKER_STABLE_REPO="https://download.docker.com/linux/ubuntu"
+KUBERNETES_GPG_KEYS="https://packages.cloud.google.com/apt/doc/apt-key.gpg"
+CALICO_POD_NETWORK_YAML="https://docs.projectcalico.org/v3.10/manifests/calico.yaml"
+FLANNEL_POD_NETWORK_YAML="https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml"
+
+

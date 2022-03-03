@@ -1,0 +1,276 @@
+
+# Service Account - To be set for the enterpriseadmin app deployment.
+# This is needed for the enterpriseadmin app to access/edit K8s resource objects
+# with the below Role permissions.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${K8S_NAME_ADMIN_SERVICE_ACCOUNT}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+---
+# Role - All access for default namespace
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ${K8S_NAME_ADMIN_ROLE}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+rules:
+
+  # secrets
+  - apiGroups: [ "" ]
+    resources: [ "secrets" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write
+
+  # configmaps
+  - apiGroups: [ "" ]
+    resources: [ "configmaps" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write
+
+  # services
+  - apiGroups: [ "" ]
+    resources: [ "services" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write
+  - apiGroups: [ "" ]
+    resources: [ "services/status" ]
+    verbs: [ "get", "list", "watch" ] # read only
+
+  # pods
+  - apiGroups: [ "" ]
+    resources: [ "pods" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write, but we dont manage it, except for delete when cleanup
+  - apiGroups: [ "" ]
+    resources: [ "pods/status" ]
+    verbs: [ "get", "list", "watch" ] # read only
+  - apiGroups: [ "" ]
+    resources: [ "pods/log" ]
+    verbs: [ "get", "list", "watch" ] # read only, not used now, will be helpful in understanding failures later
+
+  # persistentvolumeclaims
+  - apiGroups: [ "" ]
+    resources: [ "persistentvolumeclaims" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write
+  - apiGroups: [ "" ]
+    resources: [ "persistentvolumeclaims/status" ]
+    verbs: [ "get", "list", "watch" ] # read only
+
+  # deployments
+  - apiGroups: [ "apps" ]
+    resources: [ "deployments" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write
+  - apiGroups: [ "apps" ]
+    resources: [ "deployments/status" ]
+    verbs: [ "get", "list", "watch" ] # read only
+  - apiGroups: [ "apps" ]
+    resources: [ "deployments/scale" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write, not used now
+  - apiGroups: [ "apps" ]
+    resources: [ "deployments/rollback" ]
+    verbs: [ "create", "delete", "deletecollection", "patch", "update" ] # write only, not used now
+
+  # replicasets
+  - apiGroups: [ "apps" ]
+    resources: [ "replicasets" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write, not used much
+  - apiGroups: [ "apps" ]
+    resources: [ "replicasets/status" ]
+    verbs: [ "get", "list", "watch" ] # read only, not used now
+  - apiGroups: [ "apps" ]
+    resources: [ "replicasets/scale" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write, not used now
+
+  # statefulsets
+  - apiGroups: [ "apps" ]
+    resources: [ "statefulsets" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write
+  - apiGroups: [ "apps" ]
+    resources: [ "statefulsets/status" ]
+    verbs: [ "get", "list", "watch" ] # read only
+  - apiGroups: [ "apps" ]
+    resources: [ "statefulsets/scale" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write, not used now
+
+  # ingress
+  - apiGroups: [ "networking.k8s.io" ]
+    resources: [ "ingresses" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write
+  - apiGroups: [ "networking.k8s.io" ]
+    resources: [ "ingresses/status" ]
+    verbs: [ "get", "list", "watch" ] # read only
+
+  # jobs
+  - apiGroups: [ "batch" ]
+    resources: [ "jobs" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write
+  - apiGroups: [ "batch" ]
+    resources: [ "jobs/status" ]
+    verbs: [ "get", "list", "watch" ] # read only
+
+  # horizontalpodautoscalers
+  - apiGroups: [ "autoscaling" ]
+    resources: [ "horizontalpodautoscalers" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write, not used now
+  - apiGroups: [ "autoscaling" ]
+    resources: [ "horizontalpodautoscalers/status" ]
+    verbs: [ "get", "list", "watch" ] # read only, not used now
+
+  # events
+  - apiGroups: [ "" ]
+    resources: [ "events" ]
+    verbs: [ "get", "list", "watch" ] # read only
+
+  # resourcequotas
+  - apiGroups: [ "" ]
+    resources: [ "resourcequotas" ]
+    verbs: [ "get", "list", "watch" ] # read only, not used now, will be helpful in understanding failures later
+  - apiGroups: [ "" ]
+    resources: [ "resourcequotas/status" ]
+    verbs: [ "get", "list", "watch" ] # read only, not used now, will be helpful in understanding failures later
+
+  # endpoints
+  - apiGroups: [ "" ]
+    resources: [ "endpoints" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write, but we dont manage it
+
+
+---
+
+# Role Binding - Binding Service Account and Role
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ${K8S_NAME_ADMIN_ROLE_BINDING}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ${K8S_NAME_ADMIN_ROLE}
+subjects:
+  - kind: ServiceAccount
+    name: ${K8S_NAME_ADMIN_SERVICE_ACCOUNT}
+    namespace: "${K8S_NAMESPACE}"
+
+---
+
+apiVersion: v1
+data:
+  logsettings: '{"logLevel":"VERBOSE"}'
+  arcgis_log_dir: "/arcgisusr/logs/"
+  arcgis_log_settings: "/arcgisusr/adminProperties/logsettings"
+kind: ConfigMap
+metadata:
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/tier: config
+  name: ${K8S_NAME_LOG_SETTINGS_CONFIG_MAP}
+  namespace: "${K8S_NAMESPACE}"
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/tier: config
+  name: ${K8S_NAME_SPATIOTEMPORAL_INDEX_STORE_INFO_SECRET}
+  namespace: "${K8S_NAMESPACE}"
+type: Opaque
+data:
+  ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME}
+  ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD}
+stringData:
+  ELASTICSEARCH_SERVICE_NAME: ${ELASTICSEARCH_SERVICE_NAME}
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/tier: config
+  name: ${K8S_NAME_ENV_VARIABLES_SECRET}
+  namespace: "${K8S_NAMESPACE}"
+type: Opaque
+stringData:
+  env-variables.json: |-
+    ${ENV_VARIABLES}
+
+---
+
+#site-info Object
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/tier: config
+  name: ${K8S_NAME_SITE_INFO_SECRET}
+  namespace: "${K8S_NAMESPACE}"
+type: Opaque
+stringData:
+  site-status: '{
+  }'
+
+---
+
+#server-context Object
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/tier: config
+  name: ${K8S_NAME_SERVER_CONTEXT_SECRET}
+  namespace: "${K8S_NAMESPACE}"
+type: Opaque
+stringData:
+  server-context: '{
+  }'
+
+---
+
+# ConfigLastModified Object
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ${K8S_NAME_CONFIG_LAST_MODIFIED_CONFIG_MAP}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/tier: config
+data:
+  config-last-modified: '{
+  }'
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${K8S_NAME_QUEUE_CONFIG_CONFIG_MAP}
+  namespace: "${K8S_NAMESPACE}"
+data:
+  enabled_plugins: |
+    [rabbitmq_federation,rabbitmq_peer_discovery_k8s,rabbitmq_management,rabbitmq_prometheus].
+  rabbitmq.conf: |
+    loopback_users.guest = none 
+    listeners.tcp.default = 5672
+
+    cluster_formation.peer_discovery_backend  = rabbit_peer_discovery_k8s
+    cluster_formation.k8s.host = kubernetes.default.${K8S_SERVICE_DNS_SUFFIX}
+    cluster_formation.k8s.address_type = hostname
+    cluster_formation.node_cleanup.only_log_warning = true
+    cluster_partition_handling = autoheal
+  advanced.config: |
+    [{kernel, [{net_ticktime,  120}]}].  
+    
+---

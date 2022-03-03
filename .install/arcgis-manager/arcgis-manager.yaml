@@ -1,0 +1,178 @@
+# Deployment - for bringing up manager app pod.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${K8S_NAME_MANAGER_DEPLOYMENT}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: enterprise-manager
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      arcgis/app: enterprise-manager
+      arcgis/siteName: ${ARCGIS_SITENAME}
+      arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+  template:
+    metadata:
+      labels:
+        arcgis/app: enterprise-manager
+        arcgis/siteName: ${ARCGIS_SITENAME}
+        arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+        arcgis/restartTimestamp: "000"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    arcgis/app: enterprise-manager
+                    arcgis/siteName: ${ARCGIS_SITENAME}
+                    arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+                topologyKey: "kubernetes.io/hostname"
+      # User running container also needs to run with arcgis group id
+      securityContext:
+        supplementalGroups: [${SUPPLEMENTAL_GROUP_ID}]
+      automountServiceAccountToken: false
+      containers:
+      - image: ${CONTAINER_IMAGE_URL_MANAGER_APP}
+        imagePullPolicy: ${CONTAINER_IMAGE_PULL_POLICY}
+        name: main-container
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: ${LIVENESS_PERIOD_SECONDS}
+          failureThreshold: ${LIVENESS_FAILURE_THRESHOLD_COUNT}
+          timeoutSeconds: 30
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: ${READINESS_PERIOD_SECONDS}
+          failureThreshold: ${READINESS_FAILURE_THRESHOLD_COUNT}
+          timeoutSeconds: 30
+        resources:
+          requests:
+            cpu: ${RESOURCE_CPU_MIN_MANAGER}
+            memory: ${RESOURCE_MEMORY_MIN_MANAGER}
+          limits:
+            cpu: ${RESOURCE_CPU_MAX_MANAGER}
+            memory: ${RESOURCE_MEMORY_MAX_MANAGER}
+        env:
+            - name: ELASTICSEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: ELASTICSEARCH_USERNAME
+                  name: ${K8S_NAME_SPATIOTEMPORAL_INDEX_STORE_INFO_SECRET}
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: ELASTICSEARCH_PASSWORD
+                  name: ${K8S_NAME_SPATIOTEMPORAL_INDEX_STORE_INFO_SECRET}
+            - name: ELASTICSEARCH_SERVICE_NAME
+              valueFrom:
+                secretKeyRef:
+                  key: ELASTICSEARCH_SERVICE_NAME
+                  name: ${K8S_NAME_SPATIOTEMPORAL_INDEX_STORE_INFO_SECRET}
+            - name: ARCGIS_LOG_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: ${K8S_NAME_LOG_SETTINGS_CONFIG_MAP}
+                  key: arcgis_log_dir
+            - name: ARCGIS_LOG_SETTINGS
+              valueFrom:
+                configMapKeyRef:
+                  name: ${K8S_NAME_LOG_SETTINGS_CONFIG_MAP}
+                  key: arcgis_log_settings
+
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+        volumeMounts:
+        - mountPath: /arcgisusr
+          name: arcgisusr
+        - mountPath: /arcgisusr/adminProperties
+          name: log-settings
+        - mountPath: /arcgis/framework/etc/ssl/server-cert
+          name: server-cert
+
+      imagePullSecrets:
+      - name: ${CONTAINER_IMAGE_PULL_SECRET_NAME}
+      volumes:
+      - name: arcgisusr
+        emptyDir: {}
+      - name: log-settings
+        configMap:
+         name: ${K8S_NAME_LOG_SETTINGS_CONFIG_MAP}
+      - name: server-cert
+        secret:
+          secretName: ${ARCGIS_SITENAME}-interpod-cert-pfx
+---
+# Service - for exposing the app
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${K8S_NAME_MANAGER_SERVICE}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: enterprise-manager
+    arcgis/siteName: ${ARCGIS_SITENAME}
+spec:
+  selector:
+    arcgis/app: enterprise-manager
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+  ports:
+  - port: 8080
+    # Todo disable http port
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 8443
+    targetPort: 8443
+    protocol: TCP
+    name: https
+
+---
+# Ingress - for exposing the app with the /manager context via
+# a Ingress controller (Nginx).
+
+# NOTE: Keep below Ingress spec in sync with java/enterprise-admin/enterprise-admin-core/
+# src/main/resources/spec/k8s/framework/manager/enterprise-manager.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${K8S_NAME_MANAGER_INGRESS}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: enterprise-manager
+    arcgis/siteName: ${ARCGIS_SITENAME}
+  annotations:
+    kubernetes.io/ingress.class: ${INGRESS_CLASS}
+    nginx.ingress.kubernetes.io/rewrite-target: /manager/$1
+    # TODO change to HTTPS
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/configuration-snippet: rewrite (${CONTEXT}/)$|(manager)$ manager/  permanent;
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /${CONTEXT}/manager(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: ${K8S_NAME_MANAGER_SERVICE}
+            # TODO change to 8443
+            port:
+              number: 8080
+

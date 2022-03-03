@@ -1,0 +1,27 @@
+# List of static pv's to create before deployment
+#
+relational-data-volume-1
+relational-data-volume-2
+blob-data-volume-1
+blob-data-volume-2
+blob-data-volume-3
+blob-data-volume-4
+blob-data-volume-5
+blob-data-volume-6
+blob-data-volume-7
+blob-data-volume-8
+blob-data-volume-9
+blob-data-volume-10
+blob-data-volume-11
+blob-data-volume-12
+cache-data-volume
+spatiotemporal-data-volume-1
+spatiotemporal-data-volume-2
+spatiotemporal-data-volume-3
+spatiotemporal-data-volume-4
+spatiotemporal-data-volume-5
+queue-data-volume-0
+queue-data-volume-1
+sharing-volume-1
+sharing-volume-2
+metric-api-volume

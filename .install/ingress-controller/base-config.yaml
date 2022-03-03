@@ -1,0 +1,134 @@
+---
+## IMPORTANT NOTE: The below configmap template is a copy of ConfigMap from this
+## java/enterprise-admin/enterprise-admin-core/src/main/resources/spec/k8s/framework/nginx-ingress/nginx-configuration-configmap.yaml file.
+## Both these files need to be always kept in sync. Else inconsistent behaviour will happen.
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ${K8S_NAME_ING_CNTRLR_NGINX_CONFIG_CONFIG_MAP}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: ingress-nginx
+    arcgis/siteName: ${ARCGIS_SITENAME}
+data:
+  proxy-body-size: "${PROXY_BODY_SIZE}"
+  proxy-buffer-size: "${PROXY_BUFFER_SIZE}"
+  proxy-read-timeout: "${PROXY_READ_TIMEOUT}"
+  proxy-send-timeout: "${PROXY_SEND_TIMEOUT}"
+  # Adding this 2 new properties so that standard X-Forwarded-* headers
+  # and URI get passed through the Ingress Controller from the original request
+  # https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#use-forwarded-headers
+  use-forwarded-headers: "true"
+  proxy-add-original-uri-header: "true"
+  hsts: "${INGRESS_HSTS_ENABLED}"
+  ssl-protocols: "${INGRESS_SSL_PROTOCOLS}"
+  ssl-ciphers: "${INGRESS_SSL_CIPHERS}"
+  disable-access-log: "true"
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ${K8S_NAME_ING_CNTRLR_TCP_SERVICES_CONFIG_MAP}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: ingress-nginx
+    arcgis/siteName: ${ARCGIS_SITENAME}
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ${K8S_NAME_ING_CNTRLR_UDP_SERVICES_CONFIG_MAP}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: ingress-nginx
+    arcgis/siteName: ${ARCGIS_SITENAME}
+
+---
+# Ingress controller electionid configmap
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ${ING_CNTRLR_ELECTION_ID}-${INGRESS_CLASS}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: ingress-nginx
+    arcgis/siteName: ${ARCGIS_SITENAME}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${K8S_NAME_ING_CNTRLR_SERVICE_ACCOUNT}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: ingress-nginx
+    arcgis/siteName: ${ARCGIS_SITENAME}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ${K8S_NAME_ING_CNTRLR_ROLE}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: ingress-nginx
+    arcgis/siteName: ${ARCGIS_SITENAME}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - pods
+      - secrets
+      - services
+      - endpoints
+      - events
+    verbs:
+      - list
+      - watch
+      - get
+  - apiGroups:
+      - "networking.k8s.io"
+    resources:
+      - ingresses
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      # Defaults to "<election-id>-<ingress-class>"
+      # To update this set the --election-id parameter properly
+      - "${ING_CNTRLR_ELECTION_ID}-${INGRESS_CLASS}"
+      - "${PRIVATE_ING_CNTRLR_ELECTION_ID}-${INGRESS_CLASS}"
+    verbs:
+      - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ${K8S_NAME_ING_CNTRLR_ROLE_BINDING}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: ingress-nginx
+    arcgis/siteName: ${ARCGIS_SITENAME}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ${K8S_NAME_ING_CNTRLR_ROLE}
+subjects:
+  - kind: ServiceAccount
+    name: ${K8S_NAME_ING_CNTRLR_SERVICE_ACCOUNT}
+    namespace: "${K8S_NAMESPACE}"
+

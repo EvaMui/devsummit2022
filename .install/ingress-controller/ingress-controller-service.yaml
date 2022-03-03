@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+  ## Azure Load Balancer (Internal)
+  #service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+  ## AWS Network Load Balancer (External)
+  #service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+  #service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: 'true'
+  #service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+
+  ## AWS Network Load Balancer (Internal)
+  #service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+
+  ## GKE Internal Load balancer
+  #networking.gke.io/load-balancer-type: "Internal"
+  name: ${K8S_NAME_ING_CNTRLR_SERVICE}
+  namespace: "${K8S_NAMESPACE}"
+  labels:
+    arcgis/app: ingress-nginx
+    arcgis/siteName: ${ARCGIS_SITENAME}
+spec:
+  type: ${INGRESS_TYPE}
+  loadBalancerIP: ${LOAD_BALANCER_IP}
+  ports:
+    - name: https
+      port: 443
+      nodePort: ${NODE_PORT_HTTPS}
+      protocol: TCP
+  selector:
+    arcgis/app: ingress-nginx
+    arcgis/siteName: ${ARCGIS_SITENAME}
+    arcgis/instanceName: ${SELECTOR_INSTANCE_NAME}
+
+
