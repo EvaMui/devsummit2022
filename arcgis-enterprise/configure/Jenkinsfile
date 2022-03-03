@@ -5,7 +5,7 @@ pipeline {
         stage('Configure') {
             steps {
                 echo 'Configuring Enterprise on Kubernetes...'
-                sh '''
+                sh '''#!/bin/bash
                   echo `ls -al ./arcgis-enterprise/configure/password.dat`
                   export PATH="/usr/local/opt/libressl/bin:$PATH"
                   echo `openssl version`
