@@ -149,7 +149,7 @@ debug()
 clear_current_line()
 {
   if [ "$HAS_TTY" = true ]; then
-    echo -en "\033[2K\r"
+    echo -en "\033[2K\r" 
   else
     printf "%65s\r" '' ""
   fi
@@ -171,7 +171,7 @@ check_jq()
 {
   jq --version > /dev/null 2>&1
   if [ $? -ne 0 ]; then
-    fail "The jq JSON parser was not found or failed to run."
+    fail "The jq JSON parser was not found or failed to run." 
   fi
 }
 
@@ -205,7 +205,7 @@ check_configure_properties()
 {
   if [ ! -f "${CONFIGURE_PROPERTIES}" ]; then
     usage
-
+    
     exit 0
   fi
 }
@@ -217,7 +217,7 @@ validate_security_question_index()
 
   if [ $value -lt 1 ] || [ $value -gt 14 ]; then
     ret=1
-  fi
+  fi 
 
   [ $ret -eq 0 ]
 }
@@ -231,7 +231,7 @@ validate_storage_classes()
   while read line
   do
     local sc=${line/*=}
-
+    
     is_storage_class_valid "$sc"
     if [ $? -ne 0 ]; then
       ((error_count++))
@@ -544,7 +544,7 @@ get_token()
 
   # A token will only be available when a site it up
   echo "$res" | jq -r '.token' > /dev/null 2>&1
-  if [ $? -eq 0 ]; then
+  if [ $? -eq 0 ]; then 
     token=$(echo "$res" | jq -r '.token')
   fi
 
@@ -569,7 +569,7 @@ is_token_needed()
   res=$(curl -s --insecure "$url")
 
   code=$(echo "$res" | jq -r -e '.error.code')
-  [ "$code" = "499" ]
+  [ "$code" = "499" ] 
 }
 
 # get_site_status() - Query for global site status
@@ -605,7 +605,7 @@ get_site_status()
   [ -n "$res" ] && {
 
     debug "$FUNCNAME" "res = ${res}"
-
+    
     state=$(echo $res | jq -r '.status.state')
 
     if [ "$state" != "not_configured" ]; then
@@ -660,7 +660,7 @@ get_stages_list()
 
     debug "$FUNCNAME" "res = ${res}"
 
-    stages=$(echo $res | jq -r '.status.stages[] | [.name, .state] | @csv' | sed 's/,/:/g' | sed 's/"//g' | paste -sd ',')
+    stages=$(echo $res | jq -r '.status.stages[] | [.name, .state] | @csv' | sed 's/,/:/g' | sed 's/"//g' | paste -sd ',' -)
   }
 
   echo "${stages}"
@@ -708,11 +708,11 @@ get_user_managed_datastores()
 
   if [ -n "$USER_MANAGED_DATASTORES" ]; then
     [ ! -f "$USER_MANAGED_DATASTORES" ] && fail "Could not find userManagedStores file: $USER_MANAGED_DATASTORES"
-
+ 
     # Redefine it based on .json contents
     json=$(minify_json_file "$USER_MANAGED_DATASTORES")
   fi
-
+  
   echo "$json"
 }
 
@@ -876,7 +876,7 @@ poll_site_status()
     local current_stages=()
     local org_state=""
     local stages=""
-
+    
     res=$(get_site_status)
 
     org_state=$(echo $res | awk -F "|" '{print $1}')
@@ -899,7 +899,7 @@ poll_site_status()
           MESSAGE_LIST+=("$name")
 
           clear_current_line
-
+          
           print_status_line "$name" "$state"
 
         fi
@@ -915,7 +915,7 @@ poll_site_status()
       clear_current_line
       break
     fi
-
+    
   done
 
   echo ""
@@ -1036,7 +1036,7 @@ Main()
   . "${COMMON}"
 
   process_args "$@"
-
+  
   validation_check
 
   if ! is_admin_pod_running ; then
@@ -1078,3 +1078,4 @@ Main()
 }
 
 Main "$@"
+
