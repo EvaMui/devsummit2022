@@ -1,0 +1,22 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Configure') {
+            steps {
+                echo 'Configuring Enterprise on Kubernetes...'
+                sh '''#!/bin/bash
+                  echo `ls -al ./arcgis-enterprise/configure/password.dat`
+                  export PATH="/usr/local/opt/libressl/bin:$PATH"
+                  echo `openssl version`
+                  ./arcgis-enterprise/configure/configure.sh -f ./arcgis-enterprise/configure/configure-final.properties -s
+                '''
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Testing..'
+            }
+        }
+    }
+}
