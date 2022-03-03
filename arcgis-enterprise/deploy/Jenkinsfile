@@ -1,0 +1,17 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Install') {
+            steps {
+                echo 'Deploying using HELM...'
+                sh 'export KUBECONFIG=arcgis-enterprise/deploy/.kube/eva.config;' + 'helm install -n arcgis arcgis arcgis-enterprise/deploy/helm/arcgis-enterprise --timeout 10m0s'
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Testing..'
+            }
+        }
+    }
+}

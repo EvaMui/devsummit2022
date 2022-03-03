@@ -1,0 +1,16 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Deleting namespace') {
+            steps {
+                sh 'kubectl delete namespace arcgis'
+            }
+        }
+        stage('Creating namespace') {
+            steps {
+                sh 'kubectl create namespace arcgis'
+            }
+        }
+    }
+}

@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "4"
+  labels:
+    arcgis-helm/siteName: "{{ .Release.Name }}"
+  name: "{{ .Release.Name }}-pre-install-pod"
+spec:
+  serviceAccountName: "{{ .Release.Name }}-pre-install-service-account"
+  containers:
+    - name: pre-install-container
+      image: {{ printf "%s/%s/%s:%v" .Values.image.registry .Values.image.repository "enterprise-admin-tools" .Values.image.tag }}
+      imagePullPolicy: Always
+      command: [ '/arcgis/framework/helm/deploy-from-helm.sh' ]
+      args:
+        {{- if .Values.common.verbose }}
+        - -v
+        {{- end }}
+      resources:
+        requests:
+          cpu: "0.5"
+          memory: "1Gi"
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+      volumeMounts:
+        - mountPath: /arcgisusr/deploy-inputs
+          name: deploy-inputs
+        - mountPath: /arcgistmp
+          name: arcgistmp
+  restartPolicy: Never
+  terminationGracePeriodSeconds: 0
+  volumes:
+    - name: deploy-inputs
+      secret:
+        secretName: "{{ .Release.Name }}-pre-install-deploy-inputs-secret"
+    - name: arcgistmp
+      emptyDir: {}
+  imagePullSecrets:
+    - name: "{{ .Release.Name }}-pre-install-container-registry-secret"
+

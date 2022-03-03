@@ -1,2 +1,2 @@
 # devsummit2022
-Repository that contains devsummit 2022 code and configurations
+Code and configuration files used for Dev Summit 2022

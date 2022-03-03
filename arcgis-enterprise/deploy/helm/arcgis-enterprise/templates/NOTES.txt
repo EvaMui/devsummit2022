@@ -1,0 +1,17 @@
+Thank you for using Helm Charts for ArcGIS Enterprise on Kubernetes.
+
+If your release did not successfully deploy, please uninstall the release before
+trying again.
+
+If your release did successfully deploy, configure your DNS record now if you 
+have not done so yet.
+
+Visit the following URL to access the ArcGIS Enterprise on Kubernetes Setup
+wizard and configure your deployment:
+
+    https://{{ .Values.install.enterpriseFQDN }}/{{ .Values.install.context }}/manager
+
+To learn more about how to create an organization:
+
+    https://enterprise-k8s.arcgis.com/en/latest/deploy/create-a-new-organization.htm
+

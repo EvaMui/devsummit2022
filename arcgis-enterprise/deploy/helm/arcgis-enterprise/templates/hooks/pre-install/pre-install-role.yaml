@@ -1,0 +1,15 @@
+apiVersion: "rbac.authorization.k8s.io/v1"
+kind: "Role"
+metadata:
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "1"
+  labels:
+    arcgis-helm/siteName: "{{ .Release.Name }}"
+  name: "{{ .Release.Name }}-pre-install-role"
+rules:
+  # secrets
+  - apiGroups: [ "" ]
+    resources: [ "secrets" ]
+    verbs: [ "get", "list", "watch", "create", "delete", "deletecollection", "patch", "update" ] # read write

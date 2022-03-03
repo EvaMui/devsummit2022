@@ -1,0 +1,80 @@
+#################################################
+#### IMAGE REGISTRY AND REPOSITORY DETAILS
+#################################################
+image:
+  registry: docker.io
+  username: xxxxxxxxxx 
+  password: xxxxxxxxxx
+  repository: esridocker
+  tag: 10.9.1.1599
+
+
+#################################################
+#### INSTALL INPUTS
+#################################################
+install:
+  #
+  # The fully qualified domain name (FQDN) to access ArcGIS Enterprise on Kubernetes.
+  # This FQDN points to a load balancer, reverse proxy, edge router, or other web front-end
+  # configured to route traffic to the ingress controller.
+  # For example: <hostname>.<Domain>.com
+  enterpriseFQDN: devsummit1.ent.geocloud.com
+  #
+  # Enter the context path to be used in the URL for ArcGIS Enterprise on Kubernetes.
+  # For example, the context path of 'https://<FQDN>/arcgis/admin' would be 'arcgis'.
+  # The path needs to be single level; more than one level is not supported.
+  context: arcgis
+  #
+  # Set allowedPrivilegedContainers to false if you cannot run a privileged container. Additionally, you
+  # will need to set vm.max_map_count to 262144 on each node.
+  allowedPrivilegedContainers:
+  ingress:
+    #
+    # Ingress controller service type
+    #
+    # Possible values for ingressType:
+    #
+    #   NodePort        - Exposes the Service on each Node's IP at a static port (the NodePort).
+    #                     You'll be able to contact the NodePort Service, from outside the cluster,
+    #                     by requesting <NodeIP>:<NodePort>.
+    #   LoadBalancer    - Exposes the Service externally using a cloud provider's load balancer.
+    #                     The load balancer is created and configured automatically as a part of
+    #                     the deployment.
+    ingressType: NodePort
+    #
+    # Possible values for loadBalancerType (Must choose one if you plan to provision a cloud load
+    # balancer, else leave it blank):
+    #
+    #   azure-external   - Azure Load Balancer (External)
+    #   azure-internal   - Azure Load Balancer (Internal)
+    #   aws-nlb-external - AWS Network Load Balancer (External)
+    #   aws-nlb-internal - AWS Network Load Balancer (Internal)
+    #   gcp-external     - Google Cloud Platform TCP Load Balancer (External)
+    #   gcp-internal     - Google Cloud Platform TCP Load Balancer (Internal)
+    loadBalancerType:
+    #
+    # Use a pre-configured static public IP address and DNS label with the load balancer (optional).
+    loadBalancerIP:
+    #
+    # NodePort value in the range 30000-32767. Leave it blank if you want Kubernetes Control Plane to
+    # assign an available port.
+    nodePortHttps: 31443
+    #
+    # Set useOpenShiftRoute to true if you use an OpenShift route for incoming traffic.
+    useOpenshiftRoute: false
+    #
+    tls:
+      # TLS Certificate Option 1: Use an existing Kubernetes TLS secret that contains a private key and
+      # a certificate. Enter the name of the existing TLS secret.
+      secretName: my-tls-secret
+      #
+      # TLS Certificate Option 4: Generate a self-signed certificate. Enter the common name for the self-signed
+      # certificate.
+      selfSignCN:
+
+
+#################################################
+#### COMMON OPTIONS FOR DEPLOYMENT SCRIPTS
+#################################################
+common:
+  verbose: false
