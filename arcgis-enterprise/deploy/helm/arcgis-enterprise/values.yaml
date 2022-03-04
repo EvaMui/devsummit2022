@@ -18,7 +18,7 @@ install:
   # This FQDN points to a load balancer, reverse proxy, edge router, or other web front-end
   # configured to route traffic to the ingress controller.
   # For example: <hostname>.<Domain>.com
-  enterpriseFQDN: devsummit1.ent.geocloud.com
+  enterpriseFQDN: devsummit2.ent.geocloud.com
   #
   # Enter the context path to be used in the URL for ArcGIS Enterprise on Kubernetes.
   # For example, the context path of 'https://<FQDN>/arcgis/admin' would be 'arcgis'.
