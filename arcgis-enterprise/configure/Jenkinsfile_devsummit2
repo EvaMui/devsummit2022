@@ -9,7 +9,7 @@ pipeline {
                   echo `ls -al ./arcgis-enterprise/configure/password.dat`
                   export PATH="/usr/local/opt/libressl/bin:$PATH"
                   echo `openssl version`
-                  ./arcgis-enterprise/configure/configure.sh -f ./arcgis-enterprise/configure/configure-final.properties -s
+                  ./arcgis-enterprise/configure/configure.sh -f ./arcgis-enterprise/configure/configure_devsummit2.properties -s
                 '''
             }
         }
