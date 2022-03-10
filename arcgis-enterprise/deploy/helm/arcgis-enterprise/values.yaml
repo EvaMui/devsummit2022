@@ -42,7 +42,7 @@ install:
     #                     the deployment.
     ingressType: NodePort
     #
-    # Possible values for loadBalancerType (Must choose one if you plan to provision a cloud load
+    # Possible values for the loadBalancerType (Must choose one if you plan to provision a cloud load
     # balancer, else leave it blank):
     #
     #   azure-external   - Azure Load Balancer (External)
